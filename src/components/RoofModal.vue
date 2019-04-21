@@ -11,29 +11,29 @@
         </button>
       </div>
       <div class="modal-body">
-        
-        
+
+
     <form>
-        
+
       <label class="col-sm-2 col-form-label"><strong>Open</strong></label>
-      <hr>      
-      
+      <hr>
+
       <div class="control-group">
             <div class="controls form-inline">
                 <div class="col-md-2">
                     <label for="startBetween">Between</label>
                 </div>
-                
+
                 <div class="col-md-3">
                     <div class="form-group">
                     <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
-                    <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker1"/>
-                    <div class="input-group-append" data-target="#datetimepicker1" data-toggle="datetimepicker">
+                    <input type="text" v-model="roofOpenStartHour" class="form-control"/>
+                    <div class="input-group-append">
                     </div>
                     </div>
                     </div>
                 </div>
-                    
+
                 <div class="col-md-2">
                     <label for="startBetween">and</label>
                 </div>
@@ -41,7 +41,7 @@
                 <div class="col-md-3">
                     <div class="form-group">
                     <div class="input-group date" id="datetimepicker2" data-target-input="nearest">
-                    <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker2"/>
+                    <input type="text" v-model="roofOpenFinishHour" class="form-control datetimepicker-input" data-target="#datetimepicker2"/>
                     <div class="input-group-append" data-target="#datetimepicker2" data-toggle="datetimepicker">
                     </div>
                     </div>
@@ -50,80 +50,78 @@
 
           </div>
       </div>
-      
+
 <br>
 
-      <div class="form-group row">
+      <!--div class="form-group row">
         <div class="col-sm-10">
           <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="ignoreOpenIfRain" :checked="ignoreOpenIfRain" @click="updateIgnoreOpenIfRain()">
+            <input class="form-check-input" type="checkbox" id="ignoreOpenIfRain" v-model="ignoreInCaseOfRain" :checked="ignoreOpenIfRain" @click="updateIgnoreOpenIfRain()">
             <label class="form-check-label" for="ignoreOpenIfRain">
               Ignore in case of rain
             </label>
           </div>
         </div>
-      </div>
-    
-    
-      
-      <label class="col-sm-2 col-form-label"><strong>Close</strong></label>
-      <hr>      
-   
+      </div-->
+
+
+
+      <!--label class="col-sm-2 col-form-label"><strong>Close</strong></label>
+      <hr>
+
       <div class="control-group">
             <div class="controls form-inline">
                 <div class="col-md-2">
                     <label for="startBetween">Between</label>
                 </div>
-                
+
                 <div class="col-md-3">
                     <div class="form-group">
                     <div class="input-group date" id="datetimepicker3" data-target-input="nearest">
-                    <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker3"/>
+                    <input type="text" v-model="roofCloseStartHour" class="form-control datetimepicker-input" data-target="#datetimepicker3"/>
                     <div class="input-group-append" data-target="#datetimepicker3" data-toggle="datetimepicker">
-                    <!--div class="input-group-text"><i class="far fa-clock"></i></div-->
                     </div>
                     </div>
                     </div>
                 </div>
-                    
+
                 <div class="col-md-2">
                     <label for="startBetween">and</label>
                 </div>
-                
+
                 <div class="col-md-3">
                     <div class="form-group">
                     <div class="input-group date" id="datetimepicker4" data-target-input="nearest">
-                    <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker4"/>
+                    <input type="text" v-model="roofCloseFinishHour" class="form-control datetimepicker-input" data-target="#datetimepicker4"/>
                     <div class="input-group-append" data-target="#datetimepicker4" data-toggle="datetimepicker">
-                    <!--div class="input-group-text"><i class="far fa-clock"></i></div-->
                     </div>
                     </div>
                     </div>
                 </div>
 
           </div>
-      </div>
+      </div-->
       <br>
 
       <div class="form-group row">
         <div class="col-md-10">
           <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="closeWhenRain" :checked="closeWhenRain" @click="updateCloseWhenRain()">
+            <input class="form-check-input" v-model="closeIfRain" type="checkbox" id="closeWhenRain" :checked="closeWhenRain" @click="updateCloseWhenRain()">
             <label class="form-check-label" for="closeWhenRain">
               Close automaticallly in case of rain
             </label>
           </div>
         </div>
       </div>
-      
+
 
     </form>
-    
-        
+
+
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Save changes</button>
+        <button type="button" class="btn btn-primary" @click="addTriggersForRoof()">Save changes</button>
       </div>
     </div>
   </div>
@@ -157,18 +155,59 @@ export default{
     data: function () {
         return {
           closeWhenRain: false,
-          ignoreOpenIfRain: false,    
+          ignoreOpenIfRain: false,
         }
     },
     methods:{
-    
+
         updateCloseWhenRain: function(){
             this.closeWhenRain = !this.closeWhenRain;
         },
         updateIgnoreOpenIfRain: function(){
             this.ignoreOpenIfRain = !this.ignoreOpenIfRain;
+        },
+        addTriggersForRoof: function(){
+          this.$store.dispatch('addTriggersForRoof');
         }
-    
+
+    },
+    computed:{
+      closeIfRain: {
+        // getter
+        get: function () {
+          return this.$store.state.closeIfRain;
+        },
+        // setter
+        set: function (newValue) {
+          this.$store.dispatch('setCloseIfRain', newValue);
+        }
+      },
+
+
+      roofOpenStartHour: {
+        // getter
+        get: function () {
+          return this.$store.state.roofOpenStartHour;
+        },
+        // setter
+        set: function (newValue) {
+          this.$store.dispatch('setRoofOpenStartHour', newValue);
+        }
+      },      
+
+
+      roofOpenFinishHour: {
+        // getter
+        get: function () {
+          return this.$store.state.roofOpenFinishHour;
+        },
+        // setter
+        set: function (newValue) {
+          this.$store.dispatch('setRoofOpenFinishHour', newValue);
+        }
+      },
+
+
     }
 }
 

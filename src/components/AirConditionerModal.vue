@@ -11,40 +11,40 @@
         </button>
       </div>
       <div class="modal-body">
-        
-        
+
+
     <form>
-        
+
 
       <div class="form-group row">
         <div class="col-md-4">
           <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="ignoreOpenIfRain" :checked="ignoreOpenIfRain" @click="updateIgnoreOpenIfRain()">
+            <input class="form-check-input" type="checkbox" id="ignoreOpenIfRain" v-model="isTemperatureSet" :checked="ignoreOpenIfRain" @click="updateIgnoreOpenIfRain()">
             <label class="form-check-label" for="ignoreOpenIfRain">
-              Ensure temperature between 
+              Ensure temperature of
             </label>
           </div>
         </div>
-        
+
         <div class="col-md-2 text-center">
-              <input type="text" class="form-control" id="from" placeholder="18">
+              <input type="text" v-model="temperatureValue" class="form-control" id="from" placeholder="18">
         </div>
-        <div class="col-md-1 text-center">
+        <!--div class="col-md-1 text-center">
             <label class="text-center"> and </label>
         </div>
         <div class="col-md-2 text-center">
               <input type="text" class="form-control" id="to" placeholder="21">
-        </div>
-        
+        </div-->
+
       </div>
 
     </form>
-    
-        
+
+
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Save changes</button>
+        <button type="button" class="btn btn-primary" @click="addTriggersForAirConditioner" data-dismiss="modal">Save changes</button>
       </div>
     </div>
   </div>
@@ -75,22 +75,51 @@ export default{
             });
         });
     },
+
+    computed:{
+
+      isTemperatureSet: {
+        // getter
+        get: function () {
+          return this.$store.state.isTemperatureSet;
+        },
+        // setter
+        set: function (newValue) {
+          this.$store.dispatch('setIsTemperatureSet', newValue);
+        }
+      },
+
+      temperatureValue: {
+        // getter
+        get: function () {
+          return this.$store.state.temperatureValue;
+        },
+        // setter
+        set: function (newValue) {
+          this.$store.dispatch('setTemperatureValue', newValue);
+        }
+      },
+    },
+
+
     data: function () {
         return {
           closeWhenRain: false,
-          ignoreOpenIfRain: false,    
+          ignoreOpenIfRain: false,
         }
     },
     methods:{
-    
         updateCloseWhenRain: function(){
             this.closeWhenRain = !this.closeWhenRain;
         },
         updateIgnoreOpenIfRain: function(){
             this.ignoreOpenIfRain = !this.ignoreOpenIfRain;
+        },
+        addTriggersForAirConditioner: function(){
+            this.$store.dispatch('addTriggersForAirConditioner');
         }
-    
-    }
+    },
+
 }
 
 

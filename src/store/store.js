@@ -1,8 +1,6 @@
 import Vue from 'vue';
 import Vuex from 'vuex'
 import axios from 'axios'
-import moment from 'moment';
-import Chart from 'chart.js';
 
 
 Vue.use(Vuex); // tell Vue you want to use Vuex plugin
@@ -28,10 +26,31 @@ export const store = new Vuex.Store({
     sprinklerSensor: undefined,
 
 
-    trigger: undefined,
+    triggers: [],
     action: undefined,
     command: undefined,
-    dataStreams : ["RainSensor", "RoofSensor", "SprinklerSensor", "AirConditionerSensor", "HumiditySensor","TemperatureSensor"],
+    dataStreamNames : ["RainSensor", "RoofSensor", "SprinklerSensor", "AirConditionerSensor", "HumiditySensor","TemperatureSensor"],
+
+    // ROOF STATE VARIABLES
+    roofOpenStartHour: undefined,
+    roofOpenFinishHour: undefined,
+    roofCloseStartHour: undefined,
+    roofCloseFinishHour: undefined,
+    ignoreInCaseOfRain: false,
+    closeIfRain: false,
+
+    // AIR CONDITIONER STATE VARIABLES
+    temperatureValue: undefined,
+    isTemperatureSet: false,
+
+    // SPRINKLER STATE VARIABLES
+    highestHumidityValue: undefined,
+    lowestHumidityValue: undefined,
+    sprinklerOpenStartHour: undefined,
+    sprinklerOpenFinishHour: undefined,
+    sprinklerCloseStartHour: undefined,
+    sprinklerCloseFinishHour: undefined,
+
 
     actions: [
       {
@@ -45,7 +64,7 @@ export const store = new Vuex.Store({
             headers:[],
             body:{
               command:"Start Up Air Conditioner",
-              priority:"30"
+              priority:30
             }
         }
       },
@@ -61,7 +80,7 @@ export const store = new Vuex.Store({
             headers:[],
             body:{
               command:"Shutdown Air Conditioner",
-              priority:"29"
+              priority:29
             }
         }
       },
@@ -77,7 +96,7 @@ export const store = new Vuex.Store({
             headers:[],
             body:{
               command:"Open Sprinkler",
-              priority:"30"
+              priority:30
             }
         }
       },
@@ -92,7 +111,7 @@ export const store = new Vuex.Store({
             headers:[],
             body:{
               command:"Close Sprinkler",
-              priority:"29"
+              priority:29
             }
         }
       },
@@ -108,13 +127,14 @@ export const store = new Vuex.Store({
             headers:[],
             body:{
               command:"Open Roof",
-              priority:"30"
+              priority:30
             }
         }
       },
 
       {
           name:"CloseRoof",
+          http_request:{
           request_line:
             {url:"http://localhost:8090/commands",
             method:"POST",
@@ -123,8 +143,9 @@ export const store = new Vuex.Store({
           headers:[],
           body:{
             command:"Close Roof",
-            priority:"29"
+            priority:29
           }
+        }
       }
     ]
 
@@ -132,53 +153,44 @@ export const store = new Vuex.Store({
 
   mutations: {
 
-    processTriggerForRoofOpenning: (state, startHour, finishHour, ignoreIfRain) => {
+    determineClosingWindowForRoof: (state) => {
+      console.log("determineClosingWindowForRoof: " + state.roofOpenStartHour + "|" + state.roofOpenFinishHour);
 
-      let conditionStartHour = startHour + ":00:00";
-      let conditionFinishHour = finishHour + ":00:00";
-      let triggerConditions = [];
+      if(state.roofOpenStartHour != undefined  &&  state.roofOpenFinishHour != undefined){
 
-      triggerConditions.push({
-        type:"time_interval",
-        from: conditionStartHour,
-        to: conditionFinishHour
-      });
+        let firstHour = state.roofOpenStartHour - 1;
+        firstHour = firstHour.toString() + ":59:59";
+        let lastHour = state.roofOpenFinishHour + ":00:01";
 
-      if(ignoreIfRain){
-        triggerConditions.push({
-          type:"data_stream_current_value",
-          data_stream:"RainSensor",
-          condition:{operator:"=",value:0}  // if it's not raining
-        });
+        state.roofCloseStartHour = lastHour;
+        state.roofCloseFinishHour = firstHour;
+        console.log("determineClosingWindowForRoof: " + state.roofCloseStartHour + "|" + state.roofCloseFinishHour);
       }
+    },
 
-      state.trigger = {
-        name:"OpenRoofBetweenHoursIfNotRaining",
-        action:"OpenRoof",
-        policy: {type: "periodical", time_interval: "1 seconds"},
-        conditions: triggerConditions
-      };
+    determineClosingWindowForSprinkler: (state) => {
+      console.log("determineClosingWindowForSprinkler: " + state.sprinklerOpenStartHour + "|" + state.sprinklerOpenFinishHour);
 
+      if(state.sprinklerOpenStartHour != undefined  &&  state.sprinklerOpenFinishHour != undefined){
+
+        let firstHour = state.sprinklerOpenStartHour - 1;
+        firstHour = firstHour.toString() + ":59:59";
+        let lastHour = state.sprinklerOpenFinishHour + ":00:01";
+
+        state.sprinklerCloseStartHour = lastHour;
+        state.sprinklerCloseFinishHour = firstHour;
+        console.log("determineClosingWindowForSprinkler: " + state.sprinklerCloseStartHour + "|" + state.sprinklerCloseFinishHour);
+      }
     },
 
 
-    processTriggerForRoofClosing: (state, startHour, finishHour, closeIfRain) => {
-
+    processTriggerForRoofOpenning: (state) => {
+      console.log("processTriggerForRoofOpenning: " + state.roofOpenStartHour + "|" + state.roofOpenFinishHour + "|" + state.closeIfRain);
       let triggerConditions = [];
-      let triggerName = "CloseRoofBetweenHours";
 
-      if(startHour===undefined && finishHour===undefined){
-
-        triggerName = "CloseRoofOnlyIfRaining";
-        triggerConditions.push({
-          type:"data_stream_current_value",
-          data_stream:"RainSensor",
-          condition:{operator:"=",value:1}  // if it's not raining
-        });
-
-      }else{
-        let conditionStartHour = startHour + ":00:00";
-        let conditionFinishHour = finishHour + ":00:00";
+      if(state.roofOpenStartHour != undefined && state.roofOpenFinishHour != undefined){
+        let conditionStartHour = state.roofOpenStartHour + ":00:00";
+        let conditionFinishHour = state.roofOpenFinishHour + ":00:00";
 
         triggerConditions.push({
           type:"time_interval",
@@ -187,26 +199,86 @@ export const store = new Vuex.Store({
         });
       }
 
-      state.trigger = {
+      if(state.closeIfRain){
+        triggerConditions.push({
+          type:"data_stream_current_value",
+          data_stream:"RainSensor",
+          condition:{operator:"=",value: "0"}  // if it's not raining
+        });
+      }
+
+      state.triggers.push({
+        name:"OpenRoofBetweenHoursIfNotRaining",
+        action:"OpenRoof",
+        policy: {type: "periodical", time_interval: "5 minutes"},
+        conditions: triggerConditions                             // Conditions vació significa 'Always'
+      });
+      console.log("processTriggerForRoofOpenning - Trigger => " + JSON.stringify(state.triggers));
+    },
+
+
+    processTriggerForRoofClosing: (state) => {
+      console.log("processTriggerForRoofClosing: " + state.roofCloseStartHour + "|" + state.roofCloseFinishHour + "|" + state.closeIfRain);
+
+      let triggerConditions = [];
+      let triggerName = "CloseRoofBetweenHours";
+
+      if(state.roofCloseStartHour===undefined && state.roofCloseFinishHour ===undefined && state.closeIfRain){
+
+        triggerName = "CloseRoofOnlyIfRaining";
+        triggerConditions.push({
+          type:"data_stream_current_value",
+          data_stream:"RainSensor",
+          condition:{operator:"=",value:"1"}  // if it's raining
+        });
+
+      }else{
+
+        triggerConditions.push({
+          type:"time_interval",
+          from: state.roofCloseStartHour,
+          to: state.roofCloseFinishHour
+        });
+
+        if(state.closeIfRain){
+
+          state.triggers.push({
+            name: "CloseRoofOnlyIfRaining",
+            action:"CloseRoof",
+            policy: {type: "periodical", time_interval: "1 seconds"},
+            conditions: [{
+                type:"data_stream_current_value",
+                data_stream:"RainSensor",
+                condition:{operator:"=",value:"1"}  // if it's raining
+              }]
+          });
+
+        }
+
+      }
+
+      state.triggers.push({
         name: triggerName,
         action:"CloseRoof",
         policy: {type: "periodical", time_interval: "1 seconds"},
         conditions: triggerConditions
-      };
+      });
+
+      console.log("processTriggerForRoofClosing - Trigger => " + JSON.stringify(state.triggers));
     },
 
 
     processTriggerForAirConditioner: (state, temperature) => {
 
-      state.trigger = {
-        name:"StartUpAirConditionerWhenTemperatureAboveCertainValue",
+      state.triggers.push( {
+        name:"StartUpAirConditionerWhenTemperatureAbove"+temperature.toString(),
         action:"StartUpAirConditioner",
-        policy: {type: "periodical", time_interval: "1 seconds"},
+        policy: {type: "periodical", time_interval: "5 minutes"},
         conditions: [
               {
                 type:"data_stream_current_value",
                 data_stream:"TemperatureSensor",
-                condition:{operator:">",value:23}
+                condition:{operator:">",value: temperature}
               },
 
               {
@@ -215,22 +287,23 @@ export const store = new Vuex.Store({
                 condition:{operator:"=",value:0} // if it's off
               }
         ]
-      };
+      });
+      console.log("processTriggerForAirConditioner - Trigger => " + JSON.stringify(state.triggers));
 
     },
 
 
     processTriggerForAirConditionerWhenTemperatureIsBelow: (state, temperature) => {
 
-      state.trigger = {
-        name:"ShutdownAirConditionerWhenTemperatureBelowCertainValue",
+      state.triggers.push({
+        name:"ShutdownAirConditionerWhenTemperatureBelow"+temperature.toString(),
         action:"ShutdownAirConditioner",
         policy: {type: "periodical", time_interval: "1 seconds"},
         conditions: [
               {
                 type:"data_stream_current_value",
                 data_stream:"TemperatureSensor",
-                condition:{operator:"<",value:23}
+                condition:{operator:"<",value: temperature}
               },
 
               {
@@ -239,68 +312,130 @@ export const store = new Vuex.Store({
                 condition:{operator:"=",value:1} // if it's off
               }
         ]
-      };
+      });
+      console.log("processTriggerForAirConditionerWhenTemperatureIsBelow - Trigger => " + JSON.stringify(state.triggers));
 
     },
 
 
-    processTriggerForSprinklerClosing: (state, startHour, finishHour, humidityValue) => {
-
-      let conditionStartHour = startHour + ":00:00";
-      let conditionFinishHour = finishHour + ":00:00";
+    processTriggerForSprinklerClosing: (state) => {
+      console.log("#### Entering processTriggerForSprinklerClosing");
       let triggerConditions = [];
+      let triggerName = "CloseWinterGardenSpinkler";
 
-      triggerConditions.push({
-        type:"time_interval",
-        from: conditionStartHour,
-        to: conditionFinishHour
-      });
+      if((state.sprinklerCloseStartHour!=undefined && state.sprinklerCloseFinishHour !=undefined) || state.lowestHumidityValue != undefined || state.highestHumidityValue != undefined){
+        console.log("(1)");
 
-      if(ignoreIfRain){
-        triggerConditions.push({
-          type:"data_stream_current_value",
-          data_stream:"HumiditySensor",
-          condition:{operator:">",value:humidityValue}  // if it's beyond X humidity value
+        if(state.sprinklerCloseStartHour != undefined && state.sprinklerCloseFinishHour != undefined){
+          console.log("(2)");
+          triggerName += "Between"+state.sprinklerCloseStartHour+"-"+state.sprinklerCloseFinishHour;
+
+          triggerConditions.push({
+            type:"time_interval",
+            from: state.sprinklerCloseStartHour,
+            to: state.sprinklerCloseFinishHour
+          });
+
+        }
+
+        if(state.lowestHumidityValue != undefined){
+          console.log("(3)");
+          if(state.sprinklerCloseStartHour != undefined){
+            triggerName += "AndHumidityAbove"+state.lowestHumidityValue;
+          }else{
+            triggerName += "WhenHumidityAbove"+state.lowestHumidityValue;
+          }
+
+          triggerConditions.push({
+            type:"data_stream_current_value",
+            data_stream:"HumiditySensor",
+            condition:{operator:">",value: state.lowestHumidityValue.toString()}  // if it's beyond X humidity value
+          });
+        }
+
+
+        if(state.lowestHumidityValue === undefined && state.sprinklerCloseStartHour === undefined && state.highestHumidityValue != undefined){
+          triggerName += "WhenHumidityAbove"+state.highestHumidityValue;
+
+          triggerConditions.push({
+            type:"data_stream_current_value",
+            data_stream:"HumiditySensor",
+            condition:{operator:"<",value: state.highestHumidityValue.toString()}  // if it's beyond X humidity value
+          });
+        }
+
+        console.log("(4)");
+        state.triggers.push({
+          name: triggerName,
+          action:"CloseSprinkler",
+          policy: {type: "periodical", time_interval: "1 seconds"},
+          conditions: triggerConditions
         });
-      }
 
-      state.trigger = {
-        name:"CloseWinterGardenSpinkler",
-        action:"CloseSprinkler",
-        policy: {type: "periodical", time_interval: "1 seconds"},
-        conditions: triggerConditions
-      };
+      }
+      console.log("(5)");
+      console.log("processTriggerForSprinklerClosing - Trigger => " + JSON.stringify(state.triggers));
 
     },
 
 
-    processTriggerForSprinklerOpenning: (state, startHour, finishHour, humidityValue) => {
-
-      let conditionStartHour = startHour + ":00:00";
-      let conditionFinishHour = finishHour + ":00:00";
+    processTriggerForSprinklerOpenning: (state) => {
       let triggerConditions = [];
+      let triggerName = "OpenWinterGardenSpinkler";
 
-      triggerConditions.push({
-        type:"time_interval",
-        from: conditionStartHour,
-        to: conditionFinishHour
-      });
+      if((state.sprinklerOpenStartHour != undefined && state.sprinklerOpenFinishHour != undefined) || state.highestHumidityValue != undefined || state.lowestHumidityValue != undefined){
 
-      if(ignoreIfRain){
-        triggerConditions.push({
-          type:"data_stream_current_value",
-          data_stream:"HumiditySensor",
-          condition:{operator:"<",value:humidityValue}  // if it's below X humidity value
+        if(state.sprinklerOpenStartHour!=undefined && state.sprinklerOpenFinishHour != undefined){
+
+          triggerName += "Between"+state.sprinklerOpenStartHour.toString()+"-"+state.sprinklerOpenFinishHour.toString();
+          let conditionStartHour = state.sprinklerOpenStartHour + ":00:00";
+          let conditionFinishHour = state.sprinklerOpenFinishHour + ":00:00";
+
+          triggerConditions.push(
+            {
+              type:"time_interval",
+              from: conditionStartHour,
+              to: conditionFinishHour
+            });
+        }
+
+        if(state.highestHumidityValue!=undefined){
+
+          if(state.sprinklerOpenStartHour!=undefined){
+            triggerName += "AndIfHumidityBelow"+state.highestHumidityValue;
+          }else{
+            triggerName += "IfHumidityBelow"+state.highestHumidityValue;
+          }
+
+          triggerConditions.push(
+            {
+              type:"data_stream_current_value",
+              data_stream:"HumiditySensor",
+              condition:{operator:"<",value: state.highestHumidityValue.toString()}  // if it's below X humidity value
+            }
+          );
+
+        }
+
+        if(state.highestHumidityValue === undefined && state.sprinklerOpenStartHour === undefined && state.lowestHumidityValue != undefined){
+          triggerName += "WhenHumidityAbove"+state.lowestHumidityValue;
+
+          triggerConditions.push({
+            type:"data_stream_current_value",
+            data_stream:"HumiditySensor",
+            condition:{operator:"<",value: state.lowestHumidityValue.toString()}  // if it's beyond X humidity value
+          });
+        }
+
+
+        state.triggers.push({
+          name: triggerName,
+          action:"OpenSprinkler",
+          policy: {type: "periodical", time_interval: "1 seconds"},
+          conditions: triggerConditions
         });
       }
-
-      state.trigger = {
-        name:"OpenWinterGardenSpinkler",
-        action:"OpenSprinkler",
-        policy: {type: "periodical", time_interval: "1 seconds"},
-        conditions: triggerConditions
-      };
-
+      console.log("processTriggerForSprinklerOpenning - Trigger => " + JSON.stringify(state.triggers));
     },
 
 
@@ -434,8 +569,6 @@ export const store = new Vuex.Store({
       state.dataStreamsResponseFromBackend = response.data;
       state.dataStreamsConfigured = [];
 
-      console.log("Amount of Streams in Response: " + state.dataStreamsResponseFromBackend.length);
-
       for(let i=0; i<state.dataStreamsResponseFromBackend.length; i++){
         state.dataStreams.push(state.dataStreamsResponseFromBackend[i]);
 
@@ -459,14 +592,68 @@ export const store = new Vuex.Store({
     	  default: //'TemperatureSensor'
     	    state.temperature=state.dataStreamsResponseFromBackend[i].current_value;
     	}
-
-        console.log("DataStreams =>" + state.dataStreams);
       }
-      console.log(" Finishing getDataStreamsConfigured ######");
     },
+
+
+    addTriggers: (state) => {
+        for(let i=0; i<state.triggers.length; i++) {
+          console.log(">>> Trigger to add: " + JSON.stringify(state.triggers[i]));
+          axios.post(state.backendEndPoint + '/triggers', {
+            name: state.triggers[i].name,
+            action: state.triggers[i].action,
+            policy: state.triggers[i].policy,
+            conditions: state.triggers[i].conditions,
+          }).then(function (response) {
+            console.log("SUCCESS!!! => " + JSON.stringify(response));
+          }).catch(function (error) {
+            console.log("error error!!! => " + JSON.stringify(error));
+          });
+
+      }
+      state.triggers = [];
+    },
+
+    setIsTemperatureSet: (state, newValue) => {
+        state.isTemperatureSet = newValue;
+    },
+
+    setTemperatureValue: (state, newValue) => {
+        state.temperatureValue = newValue;
+    },
+
+    setCloseIfRain: (state, newValue) => {
+        state.closeIfRain = newValue;
+    },
+
+    setRoofOpenStartHour: (state, newValue) => {
+        state.roofOpenStartHour = newValue;
+    },
+
+    setRoofOpenFinishHour: (state, newValue) => {
+        state.roofOpenFinishHour = newValue;
+    },
+
+
+
+    setSprinklerOpenStartHour: (state, newValue) => {
+        state.sprinklerOpenStartHour = newValue;
+    },
+
+    setSprinklerOpenFinishHour: (state, newValue) => {
+        state.sprinklerOpenFinishHour = newValue;
+    },
+
+    setHighestHumidityValue: (state, newValue) => {
+        state.highestHumidityValue = newValue;
+    },
+
+    setLowestHumidityValue: (state, newValue) => {
+        state.lowestHumidityValue = newValue;
+    },
+
+
   },
-
-
 
   //#####################################################################
   // ACTIONS
@@ -486,14 +673,16 @@ export const store = new Vuex.Store({
       })
     },
 
+
+
     addNecessaryDataStreams: (context) =>{
       console.log("ENTERING addNecessaryDataStreams!!!");
 
-      for(let i=0; i<context.state.dataStreams.length; i++){ // sumar a Cosmos todos los Streams que necesita la aplicación
-        console.log("Action => " + JSON.stringify(context.state.dataStreams[i]));
-        
+      for(let i=0; i<context.state.dataStreamNames.length; i++){ // sumar a Cosmos todos los Streams que necesita la aplicación
+        console.log("Action => " + JSON.stringify(context.state.dataStreamNames[i]));
+
         axios.post( store.state.backendEndPoint + '/data-streams', {
-          name: context.state.dataStreams[i]
+          name: context.state.dataStreamNames[i]
         }).then( function (response) {
           console.log("SUCCESS!!! => " + JSON.stringify(response));
 
@@ -504,6 +693,9 @@ export const store = new Vuex.Store({
       }
 
     },
+
+
+
 
     addNecessaryActions: (context) => {
       console.log("ENTERING addNecessaryActions!!!");
@@ -524,11 +716,104 @@ export const store = new Vuex.Store({
     },
 
 
+
+
     lalala: (context) => {
     	window.setInterval(function(){
     	    context.dispatch('showDataStreamView');
     	}, 5000);
-    }
+    },
+
+
+
+/* SI DEJA LAS HORAS EN BLANCO, Y SELECCIONA CERRAR EN CASO DE LLUVIA => ASUMO SIEMPRE ABIERTO, CIERRO EN CASO DE LLUVIA */
+    addTriggersForRoof: (context) => {
+      console.log("####### Entering addTriggersForRoof");
+      console.log("Temperature: " + context.state.roofOpenStartHour + "|| IsTemperatureSet: " + context.state.roofOpenFinishHour + " || ignoreInCaseOfRain: " + context.state.closeIfRain);
+
+      context.commit('processTriggerForRoofOpenning'); // asume que si quiere cerrar en caso de lluvia, tambien no abre el techo si llueve.
+      context.commit('determineClosingWindowForRoof');
+      context.commit('processTriggerForRoofClosing');
+      context.commit('addTriggers');
+
+    },
+
+
+
+
+    addTriggersForAirConditioner: (context) => {
+      console.log("####### Entering addTriggersForAirConditioner");
+      console.log("Temperature: " + context.state.temperatureValue + "|| IsTemperatureSet: " + context.state.isTemperatureSet);
+
+      if(context.state.isTemperatureSet){
+        context.commit('processTriggerForAirConditioner', context.state.temperatureValue);
+        context.commit('processTriggerForAirConditionerWhenTemperatureIsBelow', context.state.temperatureValue);
+        context.commit('addTriggers');
+      }
+    },
+
+
+
+    addTriggersForSprinkler: (context) => {
+        console.log("sprinklerOpenStartHour: " + context.state.sprinklerOpenStartHour + "|| sprinklerOpenFinishHour: " + context.state.sprinklerOpenFinishHour);
+        console.log("sprinklerCloseStartHour: " + context.state.sprinklerCloseStartHour + "|| sprinklerCloseFinishHour: " + context.state.sprinklerCloseFinishHour);
+        console.log("highestHumidityValue: " + context.state.highestHumidityValue + "|| lowestHumidityValue: " + context.state.lowestHumidityValue);
+
+        context.commit('processTriggerForSprinklerOpenning');
+        context.commit('determineClosingWindowForSprinkler');
+        context.commit('processTriggerForSprinklerClosing');
+        context.commit('addTriggers');
+    },
+
+
+
+    setIsTemperatureSet: (context, newValue) => {
+      console.log("setIsTemperatureSet: " + newValue);
+      context.commit('setIsTemperatureSet', newValue);
+    },
+
+
+
+    setTemperatureValue: (context, newValue) => {
+      console.log("setTemperatureValue: " + newValue);
+      context.commit('setTemperatureValue', newValue);
+    },
+
+    setCloseIfRain: (context, newValue) => {
+      console.log("setCloseIfRain: " + newValue);
+      context.commit('setCloseIfRain', newValue);
+    },
+
+    setRoofOpenStartHour: (context, newValue) => {
+      console.log("setRoofOpenStartHour: " + newValue);
+      context.commit('setRoofOpenStartHour', newValue);
+    },
+
+    setRoofOpenFinishHour: (context, newValue) => {
+      console.log("setRoofOpenFinishHour: " + newValue);
+      context.commit('setRoofOpenFinishHour', newValue);
+    },
+
+    setSprinklerOpenStartHour: (context, newValue) => {
+      console.log("setSprinklerOpenStartHour: " + newValue);
+      context.commit('setSprinklerOpenStartHour', newValue);
+    },
+
+    setSprinklerOpenFinishHour: (context, newValue) => {
+      console.log("setSprinklerOpenFinishHour: " + newValue);
+      context.commit('setSprinklerOpenFinishHour', newValue);
+    },
+
+    setHighestHumidityValue: (context, newValue) => {
+      console.log("setHighestHumidityValue: " + newValue);
+      context.commit('setHighestHumidityValue', newValue);
+    },
+
+    setLowestHumidityValue: (context, newValue) => {
+      console.log("setLowestHumidityValue: " + newValue);
+      context.commit('setLowestHumidityValue', newValue);
+    },
 
   }
+
 })
