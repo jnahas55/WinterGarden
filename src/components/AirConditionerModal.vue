@@ -1,6 +1,7 @@
 <template>
 
 <!-- Modal -->
+
 <div class="modal fade" id="airConditionerModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg" role="document">
     <div class="modal-content">
@@ -17,11 +18,11 @@
 
 
       <div class="form-group row">
-        <div class="col-md-4">
+        <div class="col-md-6">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="ignoreOpenIfRain" v-model="isTemperatureSet" :checked="ignoreOpenIfRain" @click="updateIgnoreOpenIfRain()">
             <label class="form-check-label" for="ignoreOpenIfRain">
-              Ensure temperature of
+              Ensure temperature won't exceed
             </label>
           </div>
         </div>
@@ -29,12 +30,6 @@
         <div class="col-md-2 text-center">
               <input type="text" v-model="temperatureValue" class="form-control" id="from" placeholder="18">
         </div>
-        <!--div class="col-md-1 text-center">
-            <label class="text-center"> and </label>
-        </div>
-        <div class="col-md-2 text-center">
-              <input type="text" class="form-control" id="to" placeholder="21">
-        </div-->
 
       </div>
 

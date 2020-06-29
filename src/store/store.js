@@ -18,12 +18,12 @@ export const store = new Vuex.Store({
     dataStreamsResponseFromBackend: {},
     dataStreams:[],
 
-    humidity: undefined,
-    rain: undefined,
-    temperature: undefined,
-    roofSensor: undefined,
-    airConditionerSensor: undefined,
-    sprinklerSensor: undefined,
+    humidity: '',
+    rain: '',
+    temperature: '',
+    roofSensor: '',
+    airConditionerSensor: '',
+    sprinklerSensor: '',
 
 
     triggers: [],
@@ -61,11 +61,11 @@ export const store = new Vuex.Store({
               method:"POST",
               version:"HTTP/1.1"
             },
-            headers:[],
-            body:{
+            headers:[{"key":"Content-Type","value":"application/json;version=1.0.0"}],
+            body:JSON.stringify({
               command:"Start Up Air Conditioner",
               priority:30
-            }
+            })
         }
       },
 
@@ -77,11 +77,11 @@ export const store = new Vuex.Store({
               method:"POST",
               version:"HTTP/1.1"
             },
-            headers:[],
-            body:{
+            headers:[{"key":"Content-Type","value":"application/json;version=1.0.0"}],
+            body:JSON.stringify({
               command:"Shutdown Air Conditioner",
               priority:29
-            }
+            })
         }
       },
 
@@ -93,11 +93,11 @@ export const store = new Vuex.Store({
               method:"POST",
               version:"HTTP/1.1"
             },
-            headers:[],
-            body:{
+            headers:[{"key":"Content-Type","value":"application/json;version=1.0.0"}],
+            body:JSON.stringify({
               command:"Open Sprinkler",
               priority:30
-            }
+            })
         }
       },
       {
@@ -108,11 +108,11 @@ export const store = new Vuex.Store({
               method:"POST",
               version:"HTTP/1.1"
             },
-            headers:[],
-            body:{
+            headers:[{"key":"Content-Type","value":"application/json;version=1.0.0"}],
+            body:JSON.stringify({
               command:"Close Sprinkler",
               priority:29
-            }
+            })
         }
       },
 
@@ -124,11 +124,11 @@ export const store = new Vuex.Store({
               method:"POST",
               version:"HTTP/1.1"
             },
-            headers:[],
-            body:{
+            headers:[{"key":"Content-Type","value":"application/json;version=1.0.0"}],
+            body:JSON.stringify({
               command:"Open Roof",
               priority:30
-            }
+            })
         }
       },
 
@@ -140,11 +140,11 @@ export const store = new Vuex.Store({
             method:"POST",
             version:"HTTP/1.1"
           },
-          headers:[],
-          body:{
+          headers:[{"key":"Content-Type","value":"application/json;version=1.0.0"}],
+          body:JSON.stringify({
             command:"Close Roof",
             priority:29
-          }
+          })
         }
       }
     ]
@@ -158,12 +158,9 @@ export const store = new Vuex.Store({
 
       if(state.roofOpenStartHour != undefined  &&  state.roofOpenFinishHour != undefined){
 
-        let firstHour = state.roofOpenStartHour - 1;
-        firstHour = firstHour.toString() + ":59:59";
-        let lastHour = state.roofOpenFinishHour + ":00:01";
+        state.roofCloseStartHour = 	state.roofOpenFinishHour + ":01";
+        state.roofCloseFinishHour = 	state.roofOpenStartHour.toString() + ":00";
 
-        state.roofCloseStartHour = lastHour;
-        state.roofCloseFinishHour = firstHour;
         console.log("determineClosingWindowForRoof: " + state.roofCloseStartHour + "|" + state.roofCloseFinishHour);
       }
     },
@@ -174,8 +171,8 @@ export const store = new Vuex.Store({
       if(state.sprinklerOpenStartHour != undefined  &&  state.sprinklerOpenFinishHour != undefined){
 
         let firstHour = state.sprinklerOpenStartHour - 1;
-        firstHour = firstHour.toString() + ":59:59";
-        let lastHour = state.sprinklerOpenFinishHour + ":00:01";
+        firstHour = firstHour.toString() + ":59";
+        let lastHour = state.sprinklerOpenFinishHour + ":00";
 
         state.sprinklerCloseStartHour = lastHour;
         state.sprinklerCloseFinishHour = firstHour;
@@ -189,13 +186,15 @@ export const store = new Vuex.Store({
       let triggerConditions = [];
 
       if(state.roofOpenStartHour != undefined && state.roofOpenFinishHour != undefined){
-        let conditionStartHour = state.roofOpenStartHour + ":00:00";
-        let conditionFinishHour = state.roofOpenFinishHour + ":00:00";
+        let conditionStartHour = state.roofOpenStartHour + ":01";
+        let conditionFinishHour = state.roofOpenFinishHour + ":00";
 
         triggerConditions.push({
           type:"time_interval",
-          from: conditionStartHour,
-          to: conditionFinishHour
+          time_interval: {
+              start: conditionStartHour,
+              stop: conditionFinishHour
+            }
         });
       }
 
@@ -203,17 +202,26 @@ export const store = new Vuex.Store({
         triggerConditions.push({
           type:"data_stream_current_value",
           data_stream:"RainSensor",
-          condition:{operator:"=",value: "0"}  // if it's not raining
+          condition:{operator:"=",value: 0}  // if not raining
+        });
+        triggerConditions.push({
+          type:"data_stream_current_value",
+          data_stream:"RoofSensor",
+          condition:{operator:"=",value: 1}  // if roof closed
         });
       }
 
       state.triggers.push({
         name:"OpenRoofBetweenHoursIfNotRaining",
         action:"OpenRoof",
-        policy: {type: "periodical", time_interval: "5 minutes"},
-        conditions: triggerConditions                             // Conditions vació significa 'Always'
+        policy: {type: "periodical", time_interval: "10 seconds"},
+// 	policy: {type: "data_point_registration", data_stream: "RainSensor"},
+        conditions: triggerConditions                             // Conditions vacio significa 'Always'
       });
-      console.log("processTriggerForRoofOpenning - Trigger => " + JSON.stringify(state.triggers));
+      console.log("###########################################################################");
+      console.log("processTriggerForRoofOpenning - Trigger => " );
+      console.log(JSON.stringify(state.triggers));
+      console.log("###########################################################################");
     },
 
 
@@ -226,18 +234,24 @@ export const store = new Vuex.Store({
       if(state.roofCloseStartHour===undefined && state.roofCloseFinishHour ===undefined && state.closeIfRain){
 
         triggerName = "CloseRoofOnlyIfRaining";
+
         triggerConditions.push({
           type:"data_stream_current_value",
           data_stream:"RainSensor",
-          condition:{operator:"=",value:"1"}  // if it's raining
-        });
+          condition:{operator:"=",value:1}}); // if raining
+
+	triggerConditions.push({
+          type:"data_stream_current_value",
+          data_stream:"RoofSensor",
+          condition:{operator:"=",value:0}}); // if roof open
 
       }else{
-
-        triggerConditions.push({
+	triggerConditions.push({
           type:"time_interval",
-          from: state.roofCloseStartHour,
-          to: state.roofCloseFinishHour
+          time_interval: {
+              start: state.roofCloseStartHour, 
+              stop: state.roofCloseFinishHour
+            }
         });
 
         if(state.closeIfRain){
@@ -245,11 +259,16 @@ export const store = new Vuex.Store({
           state.triggers.push({
             name: "CloseRoofOnlyIfRaining",
             action:"CloseRoof",
-            policy: {type: "periodical", time_interval: "1 seconds"},
+            policy: {type: "periodical", time_interval: "10 seconds"},
+//	      policy: {type: "data_point_registration", data_stream: "RainSensor"},
             conditions: [{
                 type:"data_stream_current_value",
                 data_stream:"RainSensor",
-                condition:{operator:"=",value:"1"}  // if it's raining
+                condition:{operator:"=",value:1}  // if it's raining
+              },{
+                type:"data_stream_current_value",
+                data_stream:"RoofSensor",
+                condition:{operator:"=",value:0}  // if roof open
               }]
           });
 
@@ -257,10 +276,11 @@ export const store = new Vuex.Store({
 
       }
 
-      state.triggers.push({
+     state.triggers.push({
         name: triggerName,
         action:"CloseRoof",
-        policy: {type: "periodical", time_interval: "1 seconds"},
+        policy: {type: "periodical", time_interval: "10 seconds"},
+//	policy: {type: "data_point_registration", data_stream: "RainSensor"},
         conditions: triggerConditions
       });
 
@@ -273,12 +293,12 @@ export const store = new Vuex.Store({
       state.triggers.push( {
         name:"StartUpAirConditionerWhenTemperatureAbove"+temperature.toString(),
         action:"StartUpAirConditioner",
-        policy: {type: "periodical", time_interval: "5 minutes"},
+        policy: {type: "data_point_registration", data_stream: "TemperatureSensor"},
         conditions: [
               {
                 type:"data_stream_current_value",
                 data_stream:"TemperatureSensor",
-                condition:{operator:">",value: temperature}
+                condition:{operator:">",value: parseInt(temperature)}
               },
 
               {
@@ -298,18 +318,18 @@ export const store = new Vuex.Store({
       state.triggers.push({
         name:"ShutdownAirConditionerWhenTemperatureBelow"+temperature.toString(),
         action:"ShutdownAirConditioner",
-        policy: {type: "periodical", time_interval: "1 seconds"},
+        policy: {type: "data_point_registration", data_stream: "TemperatureSensor"},
         conditions: [
               {
                 type:"data_stream_current_value",
                 data_stream:"TemperatureSensor",
-                condition:{operator:"<",value: temperature}
+                condition:{operator:"<",value: parseInt(temperature)+1}
               },
 
               {
                 type:"data_stream_current_value",
                 data_stream:"AirConditionerSensor",
-                condition:{operator:"=",value:1} // if it's off
+                condition:{operator:"=",value:1} // if it's on
               }
         ]
       });
@@ -332,8 +352,10 @@ export const store = new Vuex.Store({
 
           triggerConditions.push({
             type:"time_interval",
-            from: state.sprinklerCloseStartHour,
-            to: state.sprinklerCloseFinishHour
+            time_interval: {
+                start: state.sprinklerCloseStartHour,
+                stop: state.sprinklerCloseFinishHour
+              }
           });
 
         }
@@ -349,7 +371,11 @@ export const store = new Vuex.Store({
           triggerConditions.push({
             type:"data_stream_current_value",
             data_stream:"HumiditySensor",
-            condition:{operator:">",value: state.lowestHumidityValue.toString()}  // if it's beyond X humidity value
+            condition:{operator:">",value: parseFloat(state.lowestHumidityValue)}  // if it's beyond X humidity value
+          }, 
+          { type:"data_stream_current_value",
+            data_stream:"SprinklerSensor",
+            condition:{operator:"=",value: 1}  // if sprinkler is on
           });
         }
 
@@ -360,7 +386,11 @@ export const store = new Vuex.Store({
           triggerConditions.push({
             type:"data_stream_current_value",
             data_stream:"HumiditySensor",
-            condition:{operator:"<",value: state.highestHumidityValue.toString()}  // if it's beyond X humidity value
+            condition:{operator:">",value: parseFloat(state.highestHumidityValue)}  // if it's beyond X humidity value
+          }, 
+          { type:"data_stream_current_value",
+            data_stream:"SprinklerSensor",
+            condition:{operator:"=",value: 1}  // if sprinkler is on
           });
         }
 
@@ -368,7 +398,8 @@ export const store = new Vuex.Store({
         state.triggers.push({
           name: triggerName,
           action:"CloseSprinkler",
-          policy: {type: "periodical", time_interval: "1 seconds"},
+ //         policy: {type: "periodical", time_interval: "10 seconds"},
+ 	  policy: {type: "data_point_registration", data_stream: "HumiditySensor"},
           conditions: triggerConditions
         });
 
@@ -388,14 +419,16 @@ export const store = new Vuex.Store({
         if(state.sprinklerOpenStartHour!=undefined && state.sprinklerOpenFinishHour != undefined){
 
           triggerName += "Between"+state.sprinklerOpenStartHour.toString()+"-"+state.sprinklerOpenFinishHour.toString();
-          let conditionStartHour = state.sprinklerOpenStartHour + ":00:00";
-          let conditionFinishHour = state.sprinklerOpenFinishHour + ":00:00";
+          let conditionStartHour = state.sprinklerOpenStartHour + ":00";
+          let conditionFinishHour = state.sprinklerOpenFinishHour + ":00";
 
           triggerConditions.push(
             {
               type:"time_interval",
-              from: conditionStartHour,
-              to: conditionFinishHour
+              time_interval: {
+                  start: state.conditionStartHour,
+                  stop: state.conditionFinishHour
+                }
             });
         }
 
@@ -411,9 +444,13 @@ export const store = new Vuex.Store({
             {
               type:"data_stream_current_value",
               data_stream:"HumiditySensor",
-              condition:{operator:"<",value: state.highestHumidityValue.toString()}  // if it's below X humidity value
-            }
-          );
+              condition:{operator:"<",value: parseFloat(state.highestHumidityValue)}  // if it's below X humidity value
+            }, 
+            { 
+	      type:"data_stream_current_value",
+              data_stream:"SprinklerSensor",
+              condition:{operator:"=",value: 0}  // if sprinkler is off
+            });
 
         }
 
@@ -423,7 +460,12 @@ export const store = new Vuex.Store({
           triggerConditions.push({
             type:"data_stream_current_value",
             data_stream:"HumiditySensor",
-            condition:{operator:"<",value: state.lowestHumidityValue.toString()}  // if it's beyond X humidity value
+            condition:{operator:"<",value: state.parseFloat(state.lowestHumidityValue)}  // if it's beyond X humidity value
+          }, 
+          { 
+	      type:"data_stream_current_value",
+              data_stream:"SprinklerSensor",
+              condition:{operator:"=",value: 1}  // if sprinkler is off
           });
         }
 
@@ -431,7 +473,7 @@ export const store = new Vuex.Store({
         state.triggers.push({
           name: triggerName,
           action:"OpenSprinkler",
-          policy: {type: "periodical", time_interval: "1 seconds"},
+ 	  policy: {type: "data_point_registration", data_stream: "HumiditySensor"},
           conditions: triggerConditions
         });
       }
@@ -572,7 +614,6 @@ export const store = new Vuex.Store({
       for(let i=0; i<state.dataStreamsResponseFromBackend.length; i++){
         state.dataStreams.push(state.dataStreamsResponseFromBackend[i]);
 
-
     	switch (state.dataStreamsResponseFromBackend[i].name) {
     	  case 'HumiditySensor':
     	    state.humidity=state.dataStreamsResponseFromBackend[i].current_value;
@@ -604,7 +645,7 @@ export const store = new Vuex.Store({
             action: state.triggers[i].action,
             policy: state.triggers[i].policy,
             conditions: state.triggers[i].conditions,
-          }).then(function (response) {
+          }, { headers: { "Accept": "application/json" } } ).then(function (response) {
             console.log("SUCCESS!!! => " + JSON.stringify(response));
           }).catch(function (error) {
             console.log("error error!!! => " + JSON.stringify(error));
@@ -683,7 +724,7 @@ export const store = new Vuex.Store({
 
         axios.post( store.state.backendEndPoint + '/data-streams', {
           name: context.state.dataStreamNames[i]
-        }).then( function (response) {
+        }, { headers: { "Content-Type": "application/json" } } ).then( function (response) {
           console.log("SUCCESS!!! => " + JSON.stringify(response));
 
         }).catch(function (error) {
@@ -699,13 +740,14 @@ export const store = new Vuex.Store({
 
     addNecessaryActions: (context) => {
       console.log("ENTERING addNecessaryActions!!!");
+      
       for(let i=0; i<context.state.actions.length; i++) {
         console.log("Action => " + JSON.stringify(context.state.actions[i]));
 
       axios.post(store.state.backendEndPoint + '/actions', {
           name: context.state.actions[i].name,
           http_request: context.state.actions[i].http_request
-        }).then(function (response) {
+        },  { headers: { "Content-Type": "application/json" } } ).then(function (response) {
           console.log("SUCCESS!!! => " + JSON.stringify(response));
 
           }).catch(function (error) {
@@ -718,7 +760,7 @@ export const store = new Vuex.Store({
 
 
 
-    lalala: (context) => {
+    fetchDataStreamsState: (context) => {
     	window.setInterval(function(){
     	    context.dispatch('showDataStreamView');
     	}, 5000);
@@ -731,7 +773,7 @@ export const store = new Vuex.Store({
       console.log("####### Entering addTriggersForRoof");
       console.log("Temperature: " + context.state.roofOpenStartHour + "|| IsTemperatureSet: " + context.state.roofOpenFinishHour + " || ignoreInCaseOfRain: " + context.state.closeIfRain);
 
-      context.commit('processTriggerForRoofOpenning'); // asume que si quiere cerrar en caso de lluvia, tambien no abre el techo si llueve.
+      context.commit('processTriggerForRoofOpenning'); // asume que si quiere cerrar en caso de lluvia, también no abre el techo si llueve.
       context.commit('determineClosingWindowForRoof');
       context.commit('processTriggerForRoofClosing');
       context.commit('addTriggers');

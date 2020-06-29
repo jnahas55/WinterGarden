@@ -15,7 +15,7 @@
 
     <form>
 
-      <label class="col-sm-2 col-form-label"><strong>Start</strong></label>
+      <!--label class="col-sm-2 col-form-label"><strong>Start</strong></label>
       <hr>
 
       <div class="control-group">
@@ -44,14 +44,14 @@
           </div>
       </div>
 
-<br>
+<br-->
 
       <div class="form-group row">
         <div class="col-sm-10">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="verifyHumidityToStart" :checked="verifyHumidityToStart" @click="updateVerifyHumidityToStart()">
             <label class="form-check-label" for="verifyHumidityToStart">
-              Verify Humidity To Open It
+              Check Humidity To Open Sprinkler
             </label>
           </div>
         </div>
@@ -107,11 +107,11 @@
       <br>
 
       <div class="form-group row">
-        <div class="col-md-4">
+        <div class="col-md-8">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="verifyHumidityToStop" :checked="verifyHumidityToStop" @click="updateVerifyHumidityToStop()">
             <label class="form-check-label" for="verifyHumidityToStop">
-              Verify Humidity To Close It
+              Check Humidity To Close Sprinkler
             </label>
           </div>
         </div>

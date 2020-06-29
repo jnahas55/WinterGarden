@@ -53,56 +53,6 @@
 
 <br>
 
-      <!--div class="form-group row">
-        <div class="col-sm-10">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="ignoreOpenIfRain" v-model="ignoreInCaseOfRain" :checked="ignoreOpenIfRain" @click="updateIgnoreOpenIfRain()">
-            <label class="form-check-label" for="ignoreOpenIfRain">
-              Ignore in case of rain
-            </label>
-          </div>
-        </div>
-      </div-->
-
-
-
-      <!--label class="col-sm-2 col-form-label"><strong>Close</strong></label>
-      <hr>
-
-      <div class="control-group">
-            <div class="controls form-inline">
-                <div class="col-md-2">
-                    <label for="startBetween">Between</label>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="form-group">
-                    <div class="input-group date" id="datetimepicker3" data-target-input="nearest">
-                    <input type="text" v-model="roofCloseStartHour" class="form-control datetimepicker-input" data-target="#datetimepicker3"/>
-                    <div class="input-group-append" data-target="#datetimepicker3" data-toggle="datetimepicker">
-                    </div>
-                    </div>
-                    </div>
-                </div>
-
-                <div class="col-md-2">
-                    <label for="startBetween">and</label>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="form-group">
-                    <div class="input-group date" id="datetimepicker4" data-target-input="nearest">
-                    <input type="text" v-model="roofCloseFinishHour" class="form-control datetimepicker-input" data-target="#datetimepicker4"/>
-                    <div class="input-group-append" data-target="#datetimepicker4" data-toggle="datetimepicker">
-                    </div>
-                    </div>
-                    </div>
-                </div>
-
-          </div>
-      </div-->
-      <br>
-
       <div class="form-group row">
         <div class="col-md-10">
           <div class="form-check">

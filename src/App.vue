@@ -32,7 +32,7 @@ export default {
 
 <style>
 #app {
-    background-image: url("../../open_roof.jpg");
+    background-image: url("assets/open_roof.jpg");
     background-repeat: repeat-y;
     background-size:1301px 744px;
 }
